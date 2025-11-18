@@ -25,11 +25,19 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick ffmpeg
-          POLICY_FILE=$(find /etc -name "policy.xml" 2>/dev/null | grep -i "ImageMagick" | head -n 1)
-          if [ -z "$POLICY_FILE" ]; then
-            echo "❌ CRITICAL: Could not find ImageMagick's policy.xml file!"
-            exit 1
-          fi
+          - name: 📦 Install dependencies and patch ImageMagick
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y imagemagick ffmpeg
+
+    # Force-disable ImageMagick security limits (fix for GitHub Actions)
+    sudo bash -c 'echo "<policymap>" > /etc/ImageMagick-6/policy.xml'
+    sudo bash -c 'echo "</policymap>" >> /etc/ImageMagick-6/policy.xml'
+
+    echo "--- Installing Python packages ---"
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+
           echo "✅ Found policy file at: $POLICY_FILE, applying patches..."
           sudo sed -i 's/<policy domain="resource" name="width" value=".*"\/>/<policy domain="resource" name="width" value="16384"\/>/' "$POLICY_FILE"
           sudo sed -i 's/<policy domain="resource" name="height" value=".*"\/>/<policy domain="resource" name="height" value="16384"\/>/' "$POLICY_FILE"
